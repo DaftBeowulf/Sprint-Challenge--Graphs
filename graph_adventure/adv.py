@@ -11,8 +11,8 @@ world = World()
 
 # You may uncomment the smaller graphs for development and testing purposes.
 
-roomGraph={0: [(3, 5), {'n': 1}], 1: [(3, 6), {'s': 0, 'n': 2}], 2: [(3, 7), {'s': 1}]}
-# roomGraph={0: [(3, 5), {'n': 1, 's': 5, 'e': 3, 'w': 7}], 1: [(3, 6), {'s': 0, 'n': 2}], 2: [(3, 7), {'s': 1}], 3: [(4, 5), {'w': 0, 'e': 4}], 4: [(5, 5), {'w': 3}], 5: [(3, 4), {'n': 0, 's': 6}], 6: [(3, 3), {'n': 5}], 7: [(2, 5), {'w': 8, 'e': 0}], 8: [(1, 5), {'e': 7}]}
+# roomGraph={0: [(3, 5), {'n': 1}], 1: [(3, 6), {'s': 0, 'n': 2}], 2: [(3, 7), {'s': 1}]}
+roomGraph={0: [(3, 5), {'n': 1, 's': 5, 'e': 3, 'w': 7}], 1: [(3, 6), {'s': 0, 'n': 2}], 2: [(3, 7), {'s': 1}], 3: [(4, 5), {'w': 0, 'e': 4}], 4: [(5, 5), {'w': 3}], 5: [(3, 4), {'n': 0, 's': 6}], 6: [(3, 3), {'n': 5}], 7: [(2, 5), {'w': 8, 'e': 0}], 8: [(1, 5), {'e': 7}]}
 # roomGraph={0: [(3, 5), {'n': 1, 's': 5, 'e': 3, 'w': 7}], 1: [(3, 6), {'s': 0, 'n': 2}], 2: [(3, 7), {'s': 1}], 3: [(4, 5), {'w': 0, 'e': 4}], 4: [(5, 5), {'w': 3}], 5: [(3, 4), {'n': 0, 's': 6}], 6: [(3, 3), {'n': 5, 'w': 11}], 7: [(2, 5), {'w': 8, 'e': 0}], 8: [(1, 5), {'e': 7}], 9: [(1, 4), {'n': 8, 's': 10}], 10: [(1, 3), {'n': 9, 'e': 11}], 11: [(2, 3), {'w': 10, 'e': 6}]}
 # roomGraph={0: [(3, 5), {'n': 1, 's': 5, 'e': 3, 'w': 7}], 1: [(3, 6), {'s': 0, 'n': 2, 'e': 12, 'w': 15}], 2: [(3, 7), {'s': 1}], 3: [(4, 5), {'w': 0, 'e': 4}], 4: [(5, 5), {'w': 3}], 5: [(3, 4), {'n': 0, 's': 6}], 6: [(3, 3), {'n': 5, 'w': 11}], 7: [(2, 5), {'w': 8, 'e': 0}], 8: [(1, 5), {'e': 7}], 9: [(1, 4), {'n': 8, 's': 10}], 10: [(1, 3), {'n': 9, 'e': 11}], 11: [(2, 3), {'w': 10, 'e': 6}], 12: [(4, 6), {'w': 1, 'e': 13}], 13: [(5, 6), {'w': 12, 'n': 14}], 14: [(5, 7), {'s': 13}], 15: [(2, 6), {'e': 1, 'w': 16}], 16: [(1, 6), {'n': 17, 'e': 15}], 17: [(1, 7), {'s': 16}]}
 roomGraphFinal={
@@ -42,11 +42,40 @@ def origin(direction):
     opposite = {"n": "s", "e": "w", "s": "n", "w": "e"}
     return opposite[direction]
 
-# ! Action plan
 # Create empty graph with initial room (0)
 map ={0:{}}
 for direction in world.startingRoom.getExits():
     map[0][direction] = '?'
+
+def bfs_for_unexplored():
+    # Create an empty queue and enqueue a PATH to the current room
+    q = Queue()
+    q.enqueue([player.currentRoom.id])
+    # Create a Set to store visited rooms
+    v = set()
+
+    # While the queue is not empty...
+    while q.size() > 0:
+        # > Dequeue the first PATH
+        p = q.dequeue()
+        # > Grab the last room from the PATH
+        last_room = p[-1]
+        # > If that vertex has not been visited...
+        if last_room not in v:
+            # Check if it has unexplored rooms
+            if '?' in list(map[last_room].values()):
+                # >>> IF YES, RETURN PATH (excluding starting room) so player can go travel shortest path to room with unexplored exit
+                return p[1:]
+            # Else mark it as visited
+            v.add(last_room)
+            # Then add a PATH to its neighbors to the back of the queue
+            for direction in map[last_room]:
+                # >>> COPY THE PATH
+                path_copy = p.copy()
+                # append the neighboring room id to the back
+                path_copy.append(map[last_room][direction])
+                q.enqueue(path_copy)
+
 
 # While len(map) < len(graph): 
 while len(map) < len(roomGraph):
@@ -70,7 +99,15 @@ while len(map) < len(roomGraph):
         map[player.currentRoom.id][origin(next_dir)] = current_id
 
     # Once a room with no unexplored exits is reached, run a BFS to find the shortest path to a room with an unexplored exit
-    
+    bfs_path = bfs_for_unexplored()
+    # for each room in that path, move that direction and log the movement in the traversal path
+    while bfs_path is not None and len(bfs_path) > 0:
+        next_room = bfs_path.pop(0)
+        next_direction = next((k for k, v in map[player.currentRoom.id].items() if v == next_room), None)
+        traversalPath.append(next_direction)
+        player.travel(next_direction)
+
+
 # Convert this to n/e/s/w to be added to traversal path and travel to end of path
 # Continue the loop of DFT to dead end >> BFS to find closest room with unexplored exit until length of map equals length of graph
 
