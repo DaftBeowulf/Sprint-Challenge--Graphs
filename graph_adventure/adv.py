@@ -4,6 +4,8 @@ from world import World
 
 import random
 
+from util import Stack, Queue
+
 # Load world
 world = World()
 
@@ -22,12 +24,29 @@ player = Player("Name", world.startingRoom)
 
 
 # FILL THIS IN
-traversalPath = ['n', 's']
+traversalPath = []
 
+# Write a function that picks a random unexplored exit and travels there
+def explore():
+    directions = player.currentRoom.getExits()
+    unexplored = [d for d in directions if map[player.currentRoom.id][d] == '?']
+    random_unexplored = unexplored[random.randint(0, len(unexplored)-1)]
+    player.travel(random_unexplored)
+    
 # ! Action plan
 # Create empty graph with initial room (0)
+map ={}
+map[player.currentRoom.id] = {}
+for direction in player.currentRoom.getExits():
+    map[player.currentRoom.id][direction] = '?'
+explore()
 # While len(map) < len(graph): 
-# Write a function that picks a random direction and attempts to travel there
+# while len(map) < len(roomGraph):
+#     # DFT to travel randomly until a fully explored room is found -- stack not necessary since we want to stop soon as we find room with no unexplored exit
+#     while '?' in map[player.currentRoom.id].keys():
+
+
+
 # Once traveled successfully, add the direction taken to the traversal path, and add the new room to the graph with its exits
 # This needs to be performed via DFT
 # Once a room with no unexplored exits is reached, run a BFS to find the shortest path to a room with an unexplored exit
