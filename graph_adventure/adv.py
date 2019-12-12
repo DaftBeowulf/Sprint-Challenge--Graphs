@@ -26,30 +26,51 @@ player = Player("Name", world.startingRoom)
 # FILL THIS IN
 traversalPath = []
 
-# Write a function that picks a random unexplored exit and travels there
-def explore():
+def explore_random():
+    """
+    Returns a random unexplored exit direction from the current room
+    """
     directions = player.currentRoom.getExits()
     unexplored = [d for d in directions if map[player.currentRoom.id][d] == '?']
-    random_unexplored = unexplored[random.randint(0, len(unexplored)-1)]
-    player.travel(random_unexplored)
-    
+    return unexplored[random.randint(0, len(unexplored)-1)]
+
+def origin(direction):
+    """
+    Small util function returning the opposite of a direction
+    used in quickly determining the origin direction when a player arrives in a new room
+    """
+    opposite = {"n": "s", "e": "w", "s": "n", "w": "e"}
+    return opposite[direction]
+
 # ! Action plan
 # Create empty graph with initial room (0)
-map ={}
-map[player.currentRoom.id] = {}
-for direction in player.currentRoom.getExits():
-    map[player.currentRoom.id][direction] = '?'
-explore()
+map ={0:{}}
+for direction in world.startingRoom.getExits():
+    map[0][direction] = '?'
+
 # While len(map) < len(graph): 
-# while len(map) < len(roomGraph):
-#     # DFT to travel randomly until a fully explored room is found -- stack not necessary since we want to stop soon as we find room with no unexplored exit
-#     while '?' in map[player.currentRoom.id].keys():
+while len(map) < len(roomGraph):
+    # DFT to travel randomly until a fully explored room is found -- stack not necessary since we want to stop soon as we find room with no unexplored exit
+    while '?' in list(map[player.currentRoom.id].values()):
+        current_id = player.currentRoom.id
+        # Grab direction that leads to unexplored exit
+        next_dir = explore_random()
+        # Change current room's exit in that direction to the next room
+        map[player.currentRoom.id][next_dir] = player.currentRoom.getRoomInDirection(next_dir).id
+        # Add travel direction to traversal path
+        traversalPath.append(next_dir)
+        # Travel there
+        player.travel(next_dir)
+        print(f"travelling to {next_dir}!")
+        if player.currentRoom.id not in map:
+            map[player.currentRoom.id] = {}
+        for direction in player.currentRoom.getExits():
+            map[player.currentRoom.id][direction] = '?'
+        # mark previous room as explored direction
+        map[player.currentRoom.id][origin(next_dir)] = current_id
 
-
-
-# Once traveled successfully, add the direction taken to the traversal path, and add the new room to the graph with its exits
-# This needs to be performed via DFT
-# Once a room with no unexplored exits is reached, run a BFS to find the shortest path to a room with an unexplored exit
+    # Once a room with no unexplored exits is reached, run a BFS to find the shortest path to a room with an unexplored exit
+    
 # Convert this to n/e/s/w to be added to traversal path and travel to end of path
 # Continue the loop of DFT to dead end >> BFS to find closest room with unexplored exit until length of map equals length of graph
 
@@ -73,10 +94,10 @@ else:
 #######
 # UNCOMMENT TO WALK AROUND
 #######
-player.currentRoom.printRoomDescription(player)
-while True:
-    cmds = input("-> ").lower().split(" ")
-    if cmds[0] in ["n", "s", "e", "w"]:
-        player.travel(cmds[0], True)
-    else:
-        print("I did not understand that command.")
+# player.currentRoom.printRoomDescription(player)
+# while True:
+#     cmds = input("-> ").lower().split(" ")
+#     if cmds[0] in ["n", "s", "e", "w"]:
+#         player.travel(cmds[0], True)
+#     else:
+#         print("I did not understand that command.")
