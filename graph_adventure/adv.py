@@ -34,6 +34,48 @@ def explore_random():
     unexplored = [d for d in directions if map[player.currentRoom.id][d] == '?']
     return unexplored[random.randint(0, len(unexplored)-1)]
 
+# Todo: Stretch
+# to get under 960 moves consistently, try doing a non-random exploration choice
+# run DFT/BFT (either works I think) and go down the path with the fewest total connected rooms on the other side that are not already in the map
+# think last move scenario -- if you go the north or south paths from 000 first, you will always have to journey all the way back to 000 to go north (1 unexplored room) and/or south (2) and traverse ALL THE WAY BACK the longer route to get there
+
+def explore_shortest():
+    pass
+
+ def rooms_down_path(self, starting_direction):
+        """
+        Tally total number of rooms down a given path that have not yet been explored
+        """
+        room_total = 0
+        ghost_explorer = Player("BOO", player.currentRoom)
+
+        ghost_explorer.travel(starting_direction)
+        current = ghost_explorer.currentRoom
+
+        # Create an empty stack and push the starting room id
+        s = Stack()
+        s.push(ghost_explorer.currentRoom.id)
+
+        # Create a visited set to track what this DFT instance has already found
+        visited = set()
+        
+        def dft_rooms_down_path():
+            # While the stack is not empty...
+            while s.size() > 0:
+                # Pop the last room
+                r = s.pop()
+                # If that room is not in the map AND has not been visited by this DFT...
+                if r not in map and r not in visited:
+                    # Mark it as visited and increment the unexplored rooms count                
+                    room_total += 1
+                    visited.add(r)
+                    # Then add all of its neighbors to the top of the stack
+                    if current.getRoomInDirection('n') is not None:
+                        north_explorer = Player("")
+                    # for neighbor in :
+                    #     s.push(neighbor)
+        return room_total
+
 def origin(direction):
     """
     Small util function returning the opposite of a direction
@@ -107,9 +149,6 @@ while len(map) < len(roomGraph):
         traversalPath.append(next_direction)
         player.travel(next_direction)
 
-
-# Convert this to n/e/s/w to be added to traversal path and travel to end of path
-# Continue the loop of DFT to dead end >> BFS to find closest room with unexplored exit until length of map equals length of graph
 
 # TRAVERSAL TEST
 visited_rooms = set()
