@@ -38,7 +38,7 @@ def explore_random():
 
 def explore_shortest():
     """
-    Checks each of the potential paths from the current room, returns the path that contains
+    Checks the potential paths from the current room, returns the direction that contains
     the fewest (but non-zero) number of unexplored rooms down that path.
     In the larger graph where many room paths are interconnected, a shorter number typically
     denotes a dead end branch which is more efficient to traverse the first time you see it
