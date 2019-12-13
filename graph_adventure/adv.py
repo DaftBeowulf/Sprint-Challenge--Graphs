@@ -29,29 +29,29 @@ traversalPath = []
 def explore_random():
     """
     Returns a random unexplored exit direction from the current room
+    Used to get MVP goal of final graph traversal <2000 moves (clocked in ~1000)
+    Overall inefficient since it will sometimes take the longest paths first and have to journey all the way back to the shorter dead end branches
     """
     directions = player.currentRoom.getExits()
     unexplored = [d for d in directions if map[player.currentRoom.id][d] == '?']
     return unexplored[random.randint(0, len(unexplored)-1)]
 
-# Todo: Stretch
-# to get under 960 moves consistently, try doing a non-random exploration choice
-# run DFT/BFT (either works I think) and go down the path with the fewest total connected rooms on the other side that are not already in the map
-# think last move scenario -- if you go the north or south paths from 000 first, you will always have to journey all the way back to 000 to go north (1 unexplored room) and/or south (2) and traverse ALL THE WAY BACK the longer route to get there
-
 def explore_shortest():
+    """
+    Checks each of the potential paths from the current room, returns the path that contains
+    the fewest (but non-zero) number of unexplored rooms down that path.
+    In the larger graph where many room paths are interconnected, a shorter number typically
+    denotes a dead end branch which is more efficient to traverse the first time you see it
+    """
     results = set()
     current = player.currentRoom
     direction = current.getExits()
 
     for d in direction:
         next_room = current.getRoomInDirection(d)
-        if next_room in map:
-            map[current.id][d] = next_room
-        else:
-            unexplored = unexplored_rooms_down_path(current.id, d)
-            if unexplored > 0:
-                results.add((d, unexplored))
+        unexplored = unexplored_rooms_down_path(current.id, d)
+        if unexplored > 0:
+            results.add((d, unexplored))
     if len(results) > 0:
         return min(results, key = lambda t: t[1])[0]
     else:
@@ -59,7 +59,8 @@ def explore_shortest():
 
 def unexplored_rooms_down_path(origin, starting_direction, ghost_explorer = None, visited = None):
         """
-        Tally total number of rooms down a given path that have not yet been explored
+        Tally total number of rooms down a given path that have not yet been explored.
+        Recursively creates copy of the player (a "ghost") that checks each potential connected path and increments the room_total with each unexplored room it finds
         """
         room_total = 0
         if ghost_explorer is None:
@@ -70,17 +71,19 @@ def unexplored_rooms_down_path(origin, starting_direction, ghost_explorer = None
 
         r = ghost_explorer.currentRoom.id
 
+        # Make sure we don't backtrack, but also make sure we return 0 from the recursive call
+        # Instead of the current total
         if r is origin:
             return 0
         
         # If that room is not in the map AND has not been visited by this DFT...
         if r not in map and r not in visited:
             # Mark it as visited and increment the unexplored rooms count                
-            room_total += 1
             visited.add(r)
-            # Then add all of its neighbors to the top of the stack
-            directions = ['n', 'e', 's', 'w']
-            for d in directions:
+            room_total += 1
+            # Then send a new ghost explorer down each of the potential connected rooms
+            for d in ['n', 'e', 's', 'w']:
+                # But only if that direction exists and if the room that way has not been visited
                 if ghost_explorer.currentRoom.getRoomInDirection(d) is not None and ghost_explorer.currentRoom.getRoomInDirection(d) not in visited:
                     ghost_copy = Player("Copy", ghost_explorer.currentRoom)
                     room_total += unexplored_rooms_down_path(r, d, ghost_copy, visited)
@@ -98,50 +101,8 @@ def origin(direction):
 map ={0:{}}
 for direction in world.startingRoom.getExits():
     map[0][direction] = '?'
-# print(explore_shortest())
 
-def bfs_for_unexplored():
-    # Create an empty queue and enqueue a PATH to the current room
-    q = Queue()
-    q.enqueue([player.currentRoom.id])
-    # Create a Set to store visited rooms
-    v = set()
-
-    # While the queue is not empty...
-    while q.size() > 0:
-        # > Dequeue the first PATH
-        p = q.dequeue()
-        # > Grab the last room from the PATH
-        last_room = p[-1]
-        # > If that vertex has not been visited...
-        if last_room not in v:
-            # Check if it has unexplored rooms
-            if '?' in list(map[last_room].values()):
-                # >>> IF YES, RETURN PATH (excluding starting room) so player can go travel shortest path to room with unexplored exit
-                return p[1:]
-            # Else mark it as visited
-            v.add(last_room)
-            # Then add a PATH to its neighbors to the back of the queue
-            for direction in map[last_room]:
-                # >>> COPY THE PATH
-                path_copy = p.copy()
-                # append the neighboring room id to the back
-                path_copy.append(map[last_room][direction])
-                q.enqueue(path_copy)
-
-def travel_to_nearest_unexplored():
-    bfs_path = bfs_for_unexplored()
-    while bfs_path is not None and len(bfs_path) > 0:
-        next_room = bfs_path.pop(0)
-        next_direction = next((k for k, v in map[player.currentRoom.id].items() if v == next_room), None)
-        traversalPath.append(next_direction)
-        player.travel(next_direction)
-
-
-# While len(map) < len(graph): 
-while len(map) < len(roomGraph):
-    # DFT to travel randomly until a fully explored room is found -- stack not necessary since we want to stop soon as we find room with no unexplored exit
-     
+def dft_for_dead_end():
     while '?' in list(map[player.currentRoom.id].values()):
         current_id = player.currentRoom.id
         # Grab direction that leads to unexplored exit
@@ -172,9 +133,60 @@ while len(map) < len(roomGraph):
         # mark previous room as explored direction
         map[player.currentRoom.id][origin(next_dir)] = current_id
 
-    # Once a room with no unexplored exits is reached, run a BFS to find the shortest path to a room with an unexplored exit
-    # for each room in that path, move that direction and log the movement in the traversal path
-    travel_to_nearest_unexplored()
+
+def bfs_for_unexplored():
+    """
+    Performs BFS to find shortest path to room with unexplored exit from current location
+    Returns the first path to meet this criteria
+    """
+    # Create an empty queue and enqueue a PATH to the current room
+    q = Queue()
+    q.enqueue([player.currentRoom.id])
+    # Create a Set to store visited rooms
+    v = set()
+
+    while q.size() > 0:
+        p = q.dequeue()
+        last_room = p[-1]
+        if last_room not in v:
+            # Check if it has unexplored rooms
+            if '?' in list(map[last_room].values()):
+                # >>> IF YES, RETURN PATH (excluding starting room) so player can go travel shortest path to room with unexplored exit
+                return p[1:]
+            # Else mark it as visited
+            v.add(last_room)
+            # Then add a PATH to its neighbors to the back of the queue
+            for direction in map[last_room]:
+                path_copy = p.copy()
+                path_copy.append(map[last_room][direction])
+                q.enqueue(path_copy)
+
+def travel_to_nearest_unexplored():
+    """
+    Once a room with no unexplored exits is reached, run a BFS to find 
+    the shortest path to a room with an unexplored exit for each room in 
+    that path, then move that direction and log the movement in the traversal path
+    """
+
+    bfs_path = bfs_for_unexplored()
+    while bfs_path is not None and len(bfs_path) > 0:
+        next_room = bfs_path.pop(0)
+        next_direction = next((k for k, v in map[player.currentRoom.id].items() if v == next_room), None)
+        traversalPath.append(next_direction)
+        player.travel(next_direction)
+
+def explore_maze():
+    """
+    While the player's map is shorter than the number of rooms, continue looping
+    through DFT until a dead end OR already fully-explored room is found,
+    then perform BFS to find shortest path to room with unexplored path and go there
+    """
+    while len(map) < len(roomGraph):        
+        dft_for_dead_end()
+        travel_to_nearest_unexplored()
+
+# The actual maze traversal function
+explore_maze()
 
 # TRAVERSAL TEST
 visited_rooms = set()
