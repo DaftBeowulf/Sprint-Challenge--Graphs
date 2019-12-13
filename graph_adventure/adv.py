@@ -90,11 +90,11 @@ while len(map) < len(roomGraph):
         traversalPath.append(next_dir)
         # Travel there
         player.travel(next_dir)
-        # print(f"travelling to {next_dir}!")
         if player.currentRoom.id not in map:
             map[player.currentRoom.id] = {}
-        for direction in player.currentRoom.getExits():
-            map[player.currentRoom.id][direction] = '?'
+        if len(map[player.currentRoom.id]) <1:
+            for direction in player.currentRoom.getExits():
+                map[player.currentRoom.id][direction] = '?'
         # mark previous room as explored direction
         map[player.currentRoom.id][origin(next_dir)] = current_id
 
@@ -110,7 +110,6 @@ while len(map) < len(roomGraph):
 
 # Convert this to n/e/s/w to be added to traversal path and travel to end of path
 # Continue the loop of DFT to dead end >> BFS to find closest room with unexplored exit until length of map equals length of graph
-
 
 # TRAVERSAL TEST
 visited_rooms = set()
