@@ -41,26 +41,23 @@ def explore_random():
 
 def explore_shortest():
     results = set()
-    direction = player.currentRoom.getExits()
+    current = player.currentRoom
+    direction = current.getExits()
 
-    # if player has entered loop, last room before exiting loop will
-    # throw None as direction of choice since all rooms around it are already in map
-    # solution: set the last ? door as the next room then break,
-    # then perform BFT to find nearest room with ? and go there
     for d in direction:
-        next_room = player.currentRoom.getRoomInDirection(d)
+        next_room = current.getRoomInDirection(d)
         if next_room in map:
-            map[player.currentRoom.id][d] = next_room
+            map[current.id][d] = next_room
         else:
-            unexplored_rooms = rooms_down_path(player.currentRoom.id, d)
-            if unexplored_rooms > 0:
-                results.add((d, unexplored_rooms))
+            unexplored = unexplored_rooms_down_path(current.id, d)
+            if unexplored > 0:
+                results.add((d, unexplored))
     if len(results) > 0:
         return min(results, key = lambda t: t[1])[0]
     else:
         return None
 
-def rooms_down_path(origin, starting_direction, ghost_explorer = None, visited = None):
+def unexplored_rooms_down_path(origin, starting_direction, ghost_explorer = None, visited = None):
         """
         Tally total number of rooms down a given path that have not yet been explored
         """
@@ -86,7 +83,7 @@ def rooms_down_path(origin, starting_direction, ghost_explorer = None, visited =
             for d in directions:
                 if ghost_explorer.currentRoom.getRoomInDirection(d) is not None and ghost_explorer.currentRoom.getRoomInDirection(d) not in visited:
                     ghost_copy = Player("Copy", ghost_explorer.currentRoom)
-                    room_total += rooms_down_path(r, d, ghost_copy, visited)
+                    room_total += unexplored_rooms_down_path(r, d, ghost_copy, visited)
         return room_total
 
 def origin(direction):
